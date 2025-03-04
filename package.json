@@ -1,0 +1,22 @@
+{
+    "name": "bmi",
+    "version": "1.0.0",
+    "main": "server.js",
+    "type": "module",
+    "scripts": {
+      "start": "node server.js",
+      "test": "npx --experimental-vm-modules jest"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "jest": {
+      "testEnvironment": "jsdom"
+    },
+    "dependencies": {
+      "express": "^4.21.2",
+      "jest": "^29.7.0",
+      "jest-environment-jsdom": "^29.7.0"
+    }
+  }
