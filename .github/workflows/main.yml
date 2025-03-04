@@ -8,17 +8,45 @@ jobs:
   calculating:
     runs-on: ubuntu-latest
     steps:
-
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: "18"
 
       - name: Install Dependencies
         run: npm install
 
       - name: Test the CalculateBMI function
         run: npm test
+
+      - name: Set up ssh Keys
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.INSTANCE_KEY }}
+
+      - name: Deploy to EC2
+        run: |
+          # SSH to EC2 instance (no need to specify -i because ssh-agent is managing the key)
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.INSTANCE_IP }} << 'EOF'
+          # Lade NVM und die Node.js-Version, die über NVM installiert wurde
+          export NVM_DIR="/home/ubuntu/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # NVM laden
+          nvm use v22.14.0  # Die spezifische Node.js-Version laden
+
+          # Überprüfe, ob Node.js und npm verfügbar sind
+          node -v  # Node.js-Version anzeigen
+          npm -v   # npm-Version anzeigen
+
+          mkdir -p /home/ubuntu/bmi-calculator
+          cd /home/ubuntu/bmi-calculator
+          git clone https://github.com/${{ github.repository }}.git .
+          npm install
+          # pm2 for starting the server
+          # the server as process bzw. als service starten
+          nohup node server.js > /dev/null 2>&1 &
+          EOF
+
+          # deploy to ec2
