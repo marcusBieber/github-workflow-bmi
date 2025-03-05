@@ -1,0 +1,50 @@
+name: BMI Calculator
+
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Set up ssh Keys
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.INSTANCE_KEY }}
+
+      - name: Deploy to EC2
+        run: |
+          # SSH to EC2 instance (no need to specify -i because ssh-agent is managing the key)
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.INSTANCE_IP }} << 'EOF'
+          # Lade NVM und die Node.js-Version, die über NVM installiert wurde
+          export NVM_DIR="/home/ubuntu/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # NVM laden
+          nvm use v22.14.0  # Die spezifische Node.js-Version laden
+
+          # Überprüfe, ob Node.js und npm verfügbar sind
+          node -v  # Node.js-Version anzeigen
+          npm -v   # npm-Version anzeigen
+
+          npm install -g pm2
+
+          mkdir -p /home/ubuntu/bmi-calculator
+          cd /home/ubuntu/bmi-calculator
+
+          # Repository klonen (nur, wenn es noch nicht existiert)
+          if [ ! -d "/home/ubuntu/bmi-calculator/.git" ]; then
+            git clone https://github.com/${{ github.repository }}.git .
+          else
+            git pull  # Falls das Repo bereits existiert, führe ein Pull durch
+          fi
+
+          npm install
+
+          # Starte den Server mit PM2
+          pm2 restart bmi-calculator || pm2 start server.js --name "bmi-calculator" --watch
+
+          # Stelle sicher, dass der Server bei einem Systemneustart automatisch neu startet
+          pm2 startup systemd
+          pm2 save
+          EOF
